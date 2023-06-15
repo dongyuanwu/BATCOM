@@ -3,6 +3,8 @@ nspot <- 100
 i <- 1
 simset <- vector(mode="list", length=12)
 
+
+# Generate the random effects v_i^L and v_j^R
 set.seed(2023)
 reL <- rnorm(nspot, 0, 0.4)
 reR <- rnorm(nspot, 0, 0.4)
@@ -11,9 +13,13 @@ for(ncelltype in c(5, 10, 15)){
     
     set.seed(2023+20-ncelltype)
     
+    # Generate the original positive betas
     truebeta <- runif(ncelltype*ncelltype+1, 0.1, 0.5)
+    
+    # Randomly treat half of them be negative
     truebeta[sample(length(truebeta), length(truebeta)/2)] <- truebeta[sample(length(truebeta), length(truebeta)/2)]*(-1)
     
+    # Generate zeros (for sparsity of the betas)
     orig <- 1:(ncelltype^2)
     zero_0.2 <- sample(orig, round(ncelltype^2)*0.2)
     zero_0.4 <- c(zero_0.2, sample(orig[!(orig %in% zero_0.2)], round(ncelltype^2)*0.2))

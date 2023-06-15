@@ -7,6 +7,8 @@ simdat <- readRDS("simdat1.rds")
 
 nspot <- 100
 
+# Generate a spot panel with 10*10 grid
+
 generate_panel_posi <- function(row=10, col=10) {
     
     columnid <- rep(1:col, times=row)
@@ -33,6 +35,8 @@ for (nset in 1:length(simdat)) {
         
         print(paste0("rho=", simset$rho, "; phi=", simset$phi, "; p=", simset$p, "; sprate=", simset$sprate, "; iter=", k))
         
+        # Get the simulation data from compound Poisson-Gamma distribution
+        
         Y1 <- simdat[[nset]]$simdat[[k]]$Y
         M <- simdat[[nset]]$simdat[[k]]$M
         rmposi <- simdat[[nset]]$simdat[[k]]$rmposi
@@ -54,6 +58,8 @@ for (nset in 1:length(simdat)) {
         
         eta[eta > 10] <- 10
         mu <- c(exp(eta))
+        
+        # Generate new simulation data from the pseudo hurdle Gamma model
         
         p1 <- mu / (1 + mu)
         alpha <- runif(length(Y1), 0.5, 5)

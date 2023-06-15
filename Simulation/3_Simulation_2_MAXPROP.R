@@ -82,6 +82,7 @@ for (nset in 1:length(simdat)) {
         print(paste0("rho=", simset$rho, "; phi=", simset$phi, "; p=", simset$p, "; sprate=", simset$sprate, "; iter=", k))
         
         M <- simdat[[nset]]$simdat[[k]]$M
+        # Treat the cell type with highest proportion as 1, others as 0.
         M <- t(apply(M, 1, adj_M_row))
         rmposi <- simdat[[nset]]$simdat[[k]]$rmposi
         
@@ -113,7 +114,7 @@ for (nset in 1:length(simdat)) {
         
         beta.cov <- c(10000, rep(0.01, ncol(X)-1), rep(1, nspot*2))
         
-        # initial values
+        # Estimate initial values of betas, v^L, and v^R with fixed phi=1 and p=1.5
         begin <- Sys.time()
         beta <- as.vector(newton_raphson_beta_re_sp(newX, Y, beta.cov, logphi, p, nspot, 
                                                  spot[, 1]-1, spot[, 2]-1, 0.000001, 100))
@@ -122,11 +123,13 @@ for (nset in 1:length(simdat)) {
         
         flag <- 1
         
+        # Estimate initial values of betas, v^L, v^R, T, and logphi, and theta(=log((p-1)/(2-p)))
         begin <- Sys.time()
         nr_res <- tryCatch(newton_raphson_re_sp(params, newX, Y, beta.cov, nspot, 
                                             spot[, 1]-1, spot[, 2]-1, 0.000001, 100, 1),
                             error=function(err) list(params_new=params, TT=ifelse(Y > 0, 1, 0)))
         params1 <- as.vector(nr_res$params_new)
+        # In some extreme cases, this method won't converge. Then we can change the learning rate from 1 to 0.1 and try again
         if(all(params1[-c(1:3)] == 0) | all(params1 == params) |
             abs(params1[1]) > 10 | abs(params1[2]) > 10) {
             nr_res <- tryCatch(newton_raphson_re_sp(params, newX, Y, beta.cov, nspot,
@@ -135,6 +138,7 @@ for (nset in 1:length(simdat)) {
             params1 <- as.vector(nr_res$params_new)
             flag <- 2
         }
+        # If it still does not converge, then we just use the estimated values of betas and arbitrary values of T, phi, and p
         if(all(params1[-c(1:3)] == 0) | all(params1 == params) |
             abs(params1[1]) > 10 | abs(params1[2]) > 10) {
             flag <- 3
@@ -151,15 +155,19 @@ for (nset in 1:length(simdat)) {
         reR <- re[(length(re)/2+1):length(re)][spot[, 2]]
         params <- params[1:(ncol(X)+2)]
         
-        # main mcmc algorithm
+        # main MCMC algorithm
         
         iter <- 1
         hmcflag <- TRUE
         begin <- Sys.time()
+        # The MCMC algorithm sometimes may not provide any acceptable samples, but it just depends on random seeds.
+        # So we can try it again and again until we get the results.
         while( hmcflag & (iter <= 10) ) {
             hmcres <- hmc(Y, X, params, TT, reL, reR, 20000)
             paramstemp <- hmcres$params_store[-burnin, ]
             TTtemp <- hmcres$TT
+            
+            # If the acceptance rate is very low, we will run hmc function again.
             if( sum(paramstemp[, 1] == 0) < 1000 ) {
                 hmcflag <- FALSE
             } else {
@@ -168,11 +176,15 @@ for (nset in 1:length(simdat)) {
         }
         times <- c(times, difftime(Sys.time(), begin, units="secs"))
         print(difftime(Sys.time(), begin, units="hours"))
+        
+        # Parameter transformation
 
         phistore <- exp(paramstemp[, 1])
         paramstemp[, 2] <- ifelse(paramstemp[, 2] > 10, 10, paramstemp[, 2])
         paramstemp[, 2] <- ifelse(paramstemp[, 2] < -10, -10, paramstemp[, 2])
         pstore <- (2*exp(paramstemp[, 2])+1)/(exp(paramstemp[, 2])+1)
+        
+        # Descriptive statistics for our inference samples of parameters.
 
         phires <- get_measure(phistore)
         pres <- get_measure(pstore)

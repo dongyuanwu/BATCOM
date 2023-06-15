@@ -7,6 +7,8 @@ betaset <- readRDS("simdat_beta.rds")
 
 nspot <- 100
 
+# Generate a spot panel with 10*10 grid
+
 generate_panel_posi <- function(row=10, col=10) {
     
     columnid <- rep(1:col, times=row)
@@ -21,6 +23,8 @@ dist <- sqrt((spotlist$spotX[spot[, 1]] - spotlist$spotX[spot[, 2]])^2 +
                  (spotlist$spotY[spot[, 1]] - spotlist$spotY[spot[, 2]])^2)
 
 nsim <- 100
+
+# Simulation parameters
 
 ncelltypes <- c(5, 10, 15)
 rhos <- c(0.2, 0.4, 0.6, 0.8)
@@ -59,17 +63,25 @@ for (ncelltype in ncelltypes) {
                         
                         print(paste0("rho=", rho, "; phi=", phi, "; p=", p, "; sprate=", sprate, "; iter=", k))
                         
+                        # Generate cell type proportion matrix
+                        
                         M <- NULL
                         for (i in 1:nspot) {
                             M <- rbind(M, prop.table(runif(ncelltype)))
                         }
+                        
+                        # Calculate M*M
                         
                         Ms <- get_Ms(M, spot)
                         
                         X <- scale(Ms * exp(-rho*dist), center=TRUE, scale=TRUE)
                         X <- cbind(rep(1, nrow(X)), X)
                         
+                        # eta = X * beta + v_i^L + v_j^R
+                        
                         eta <- c(X %*% truebeta + reL[spot[, 1]] + reR[spot[, 2]])
+                        
+                        # Remove some extreme values of eta
                         
                         threshold <- max(7, mean(eta) + 3 * sd(eta))
                         rmposi <- which(eta > threshold)
@@ -82,6 +94,8 @@ for (ncelltype in ncelltypes) {
                         mu <- c(exp(eta))
                         
                         #########
+                        
+                        # Generate Y using Tweedie distribution
                         
                         n <- length(mu)
                         Y <- array(dim = n, NA)

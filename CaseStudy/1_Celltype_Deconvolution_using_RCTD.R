@@ -1,14 +1,20 @@
 
 library(data.table)
 
+# load scRNAseq data
+
 scdat <- as.data.frame(fread("merge10pts_counts.txt"))
 
 scdat <- scdat[, c(1, which(grepl("P2_", colnames(scdat))))]
 rownames(scdat) <- scdat[, 1]
 scdat <- scdat[-c(1:2), -1]
 
+# load scRNAseq metadata
+
 scmeta <- read.table("patient_metadata_new.txt")
 scmeta <- scmeta[scmeta$patient == "P2", ]
+
+# load SRT data
 
 stdat <- t(read.table("GSM4284317_P2_ST_rep2_stdata.tsv"))
 stmeta <- as.data.frame(colnames(stdat))
@@ -19,8 +25,12 @@ stmeta$spot <- paste0("spot", 1:nrow(stmeta))
 colnames(stdat) <- stmeta$spot
 rownames(stmeta) <- stmeta$spot
 
+# filtering
+
 rmgene <- which(apply(scdat, 1, function(x) sum(x == 0)) > 0.975*ncol(scdat))
 scdat <- scdat[-rmgene, ]
+
+# check the common genes in scRNAseq data and SRT data
 
 commongene <- rownames(stdat)[rownames(stdat) %in% rownames(scdat)]
 scdat <- scdat[rownames(scdat) %in% commongene, ]

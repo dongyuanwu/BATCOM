@@ -3,6 +3,8 @@ library(data.table)
 library(Rcpp)
 library(Seurat)
 
+# load the SRT data
+
 stdat <- t(read.table("GSM4284317_P2_ST_rep2_stdata.tsv"))
 stmeta <- as.data.frame(colnames(stdat))
 stmeta$x <- as.numeric(sapply(strsplit(stmeta[, 1], "x"), function(x) x[1]))
@@ -11,6 +13,8 @@ colnames(stmeta)[1] <- "spot"
 stmeta$spot <- paste0("spot", 1:nrow(stmeta))
 colnames(stdat) <- stmeta$spot
 rownames(stmeta) <- stmeta$spot
+
+# load the cell type proportion matrix
 
 celltypeinfo <- readRDS("./RCTD/RCTDProportion_level2.rds")
 colnames(celltypeinfo) <- gsub("\\.", "_", colnames(celltypeinfo))
@@ -21,6 +25,8 @@ naposi <- which(!(rownames(stmeta) %in% rownames(celltypeinfo)))
 stdat <- stdat[, -naposi]
 stmeta <- stmeta[-naposi, ]
 
+# filtering
+
 keepspot <- which(apply(stdat, 2, function(x) sum(x != 0)) > 100)
 stdat <- stdat[, keepspot]
 stmeta <- stmeta[keepspot, ]
@@ -28,10 +34,14 @@ celltypeinfo <- celltypeinfo[keepspot, ]
 rmgene <- which(apply(stdat, 1, function(x) sum(x!=0)) < (ncol(stdat) * 0.025))
 stdat <- stdat[-rmgene, ]
 
+# normalization using Seurat
+
 dat <- CreateSeuratObject(counts=stdat, meta.data=stmeta)
 dat <- NormalizeData(dat, assay = "RNA", scale.factor=10000)
 
 stdat <- dat@assays$RNA@data
+
+# We can use any of the LR pairs database, below is an example for CellChatDB
 
 ###################### cellchatDB ####################################
 
@@ -61,6 +71,8 @@ stdat <- dat@assays$RNA@data
 # ligands <- lapply(ligands, unlist)
 # receptors <- lapply(receptors, unlist)
 
+# We can also use our own LR pairs
+
 ######################### Self LRPairs #############################
 
 lrpairs <- readRDS("lrpairs.rds")
@@ -72,7 +84,7 @@ receptors <- lrpairs$receptor
 ######################################################################
 
 # check existing pairs
- <- sapply(ligands, function(x) any(x %in% rownames(stdat)))
+checkl <- sapply(ligands, function(x) any(x %in% rownames(stdat)))
 checkr <- sapply(receptors, function(x) any(x %in% rownames(stdat)))
 ligands <- ligands[checkl & checkr]
 receptors <- receptors[checkl & checkr]
@@ -87,6 +99,7 @@ start <- Sys.time()
 
 spot <- data.frame(spoti=rep(1:ncol(stdat), each=ncol(stdat)), 
                    spotj=rep(1:ncol(stdat), times=ncol(stdat)))
+# set a threshold to control the number of spot pairs will be included in the model fitting
 check_neighbor <- if_neighbors_samesample(stmeta$x, stmeta$y, dist=3)
 spot <- as.matrix(spot[check_neighbor, ])
 
@@ -94,6 +107,8 @@ Sys.time() - start
 
 
 ############################## each lr pairs ######################################
+
+# Calculate communication scores C_ij for each LR pairs
 
 expr1 <- as.matrix(stdat)
 genenames <- rownames(stdat)
@@ -121,6 +136,7 @@ for(k in 1:length(ligands)) {
 }
 Sys.time() - start
 
+# Calculate spot distances
 
 start <- Sys.time()
 D <- get_dist(stmeta$x, stmeta$y, spot)
@@ -129,6 +145,8 @@ ligands <- ligands[posi]
 receptors <- receptors[posi]
 Cspots <- Cspots[posi]
 Sys.time() - start
+
+# Filtering out some LR pairs that do not have enough information
 
 nonzero_prop <- sapply(Cspots, function(x) sum(x != 0) / nrow(spot))
 summary(nonzero_prop)
@@ -152,7 +170,7 @@ adj_M_row <- function(M_row) {
 }
 
 # M <- t(apply(M, 1, adj_M_row))   # If using MAXPROP version
-Ms <- get_Ms(M, spot)
+Ms <- get_Ms(M, spot)   # Calculate M*M
 Sys.time() - start
 
 X <- Ms * exp(-0.5*D)  # can change 0.5 to other values for the tuning parameter rho

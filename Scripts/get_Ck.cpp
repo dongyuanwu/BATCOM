@@ -4,6 +4,8 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 NumericVector get_Ck_strict(NumericMatrix expr, NumericMatrix spots, NumericVector ligand, NumericVector receptor) {
 	
+	// This function can be used for calculating the geometric mean of the subunits
+	
 	int Cknrow = spots.nrow();
 	
 	NumericVector Ck(Cknrow);
@@ -37,6 +39,8 @@ NumericVector get_Ck_strict(NumericMatrix expr, NumericMatrix spots, NumericVect
 // [[Rcpp::export]]
 NumericVector get_Ck(NumericMatrix expr, NumericMatrix spots, NumericVector ligand, NumericVector receptor) {
 	
+	// This function can be used for calculating the arithmetic mean of the subunits
+	
 	int Cknrow = spots.nrow();
 	
 	NumericVector Ck(Cknrow);
@@ -57,37 +61,6 @@ NumericVector get_Ck(NumericMatrix expr, NumericMatrix spots, NumericVector liga
 			rexpr = rexpr + expr(receptor[a]-1, spotj-1);
 		}
 		rexpr = rexpr / receptor.length();
-		
-		Ck[i] = lexpr * rexpr;
-		
-	}
-	
-	return Ck;
-	
-}
-
-
-// [[Rcpp::export]]
-NumericVector get_Ck_overall(NumericMatrix expr, NumericMatrix spots, NumericVector ligand, NumericVector receptor) {
-	
-	int Cknrow = spots.nrow();
-	
-	NumericVector Ck(Cknrow);
-	
-	for (int i = 0; i < Cknrow; ++i) {
-		
-		int spoti = spots(i, 0);
-		int spotj = spots(i, 1);
-		
-		double lexpr = 0;
-		for (int a = 0; a < ligand.length(); ++a) {
-			lexpr = lexpr + expr(ligand[a]-1, spoti-1);
-		}
-		
-		double rexpr = 0;
-		for (int a = 0; a < receptor.length(); ++a) {
-			rexpr = rexpr + expr(receptor[a]-1, spotj-1);
-		}
 		
 		Ck[i] = lexpr * rexpr;
 		

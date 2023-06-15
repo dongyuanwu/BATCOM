@@ -6,8 +6,8 @@ dat <- readRDS("simres1_batcom.rds")
 
 get_performance_beta_qval_auc <- function(summarybeta, truebeta) {
     
-    coefest <- summarybeta[, 4]
-    Z <- summarybeta[, 4] / summarybeta[, 7]
+    coefest <- summarybeta[, 4]   # summarybeta[, 4] is the mean of inference samples
+    Z <- summarybeta[, 4] / summarybeta[, 7]   # summarybeta[, 7] is the SD of inference samples
     pval <- 2 * pnorm(abs(Z), lower.tail=FALSE)
     qval <- p.adjust(pval, method="fdr")
     
@@ -51,8 +51,8 @@ get_performance_beta_qval_auc <- function(summarybeta, truebeta) {
 
 get_performance_beta_qval <- function(summarybeta, truebeta) {
     
-    coefest <- summarybeta[, 4]
-    Z <- summarybeta[, 4] / summarybeta[, 7]
+    coefest <- summarybeta[, 4]   # summarybeta[, 4] is the mean of inference samples
+    Z <- summarybeta[, 4] / summarybeta[, 7]   # summarybeta[, 7] is the SD of inference samples
     pval <- 2 * pnorm(abs(Z), lower.tail=FALSE)
     qval <- p.adjust(pval, method="fdr")
     
