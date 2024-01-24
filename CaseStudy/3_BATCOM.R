@@ -3,8 +3,8 @@ dat <- readRDS("RCTD_HMC_dist3_estrho0.5_dat.rds")
 
 ### overall
 
-# temp <- matrix(unlist(dat$Y), ncol=length(dat$Y[[1]]))
-# Y <- colSums(temp)
+# temp <- matrix(unlist(dat$Y), ncol=length(dat$Y))
+# Y <- rowSums(temp)
 
 ###
 
